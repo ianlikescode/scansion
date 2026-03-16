@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scansion — Poetic Metre Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Cormorant+SC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #f5f4f0; font-family: 'EB Garamond', Georgia, serif; color: #1a1a18; }
+  body { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+
+  #pr { width: 100%; max-width: 900px; height: 620px; display: flex; flex-direction: column; border: 0.5px solid #d0cec5; border-radius: 12px; overflow: hidden; background: #f9f8f4; box-shadow: 0 2px 20px rgba(0,0,0,0.07); }
+  #pr textarea { resize: none; font-family: 'EB Garamond', Georgia, serif; font-size: 17px; line-height: 1.9; background: transparent; border: none; color: #1a1a18; caret-color: #555; padding: 20px; flex: 1; }
+  #pr textarea::placeholder { color: #aaa; font-style: italic; }
+  #pr textarea:focus { outline: none; }
+  #pr ::-webkit-scrollbar { width: 4px; }
+  #pr ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+  .sc-line { margin-bottom: 18px; }
+  .syl-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 2px; margin-bottom: 3px; }
+  .syl { display: inline-flex; flex-direction: column; align-items: center; }
+  .syl-mk { font-size: 12px; line-height: 1; font-family: monospace; margin-bottom: 1px; }
+  .syl-tx { font-size: 16px; line-height: 1.3; font-family: 'EB Garamond', Georgia, serif; }
+  .stressed .syl-mk { color: #1a1a18; }
+  .stressed .syl-tx { color: #1a1a18; font-weight: 500; }
+  .unstressed .syl-mk { color: #aaa; }
+  .unstressed .syl-tx { color: #777; }
+  .foot-sep { display: inline-flex; flex-direction: column; align-items: center; margin: 0 3px; }
+  .foot-sep .syl-mk { visibility: hidden; }
+  .foot-sep .syl-tx { color: #bbb; padding: 0 1px; }
+  .meter-tag { font-size: 12px; font-style: italic; color: #777; margin-top: 1px; }
+  .blank-gap { height: 34px; }
+
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #1a1a18; color: #e8e6df; }
+    #pr { background: #222220; border-color: #3a3a36; box-shadow: 0 2px 20px rgba(0,0,0,0.4); }
+    #pr textarea { color: #e8e6df; caret-color: #aaa; }
+    .hdr, .col-hdr { background: #2a2a27 !important; border-color: #3a3a36 !important; color: #888 !important; }
+    .hdr span:first-child { color: #e8e6df !important; }
+    .col-div { background: #3a3a36 !important; }
+    .stressed .syl-mk, .stressed .syl-tx { color: #e8e6df; }
+    .unstressed .syl-mk { color: #555; }
+    .unstressed .syl-tx { color: #888; }
+    .foot-sep .syl-tx { color: #555; }
+    .meter-tag { color: #888; }
+  }
+</style>
+</head>
+<body>
+<div id="pr">
+  <div class="hdr" style="border-bottom:0.5px solid #d0cec5;padding:10px 20px;display:flex;align-items:baseline;gap:14px;flex-shrink:0;background:#f0ede5">
+    <span style="font-family:'Cormorant SC',serif;font-size:17px;letter-spacing:0.06em">Scansion</span>
+    <span style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#999">Poetic metre analysis</span>
+  </div>
+  <div class="col-hdr" style="display:flex;border-bottom:0.5px solid #d0cec5;flex-shrink:0;background:#f0ede5">
+    <div style="flex:1;padding:6px 20px;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#999">Compose</div>
+    <div class="col-div" style="width:0.5px;background:#d0cec5"></div>
+    <div style="flex:1;padding:6px 20px;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:#999;display:flex;align-items:center;gap:10px">
+      Scansion
+      <span style="text-transform:none;letter-spacing:0;font-style:italic;font-size:11px">/ stressed &nbsp;˘ unstressed &nbsp;| foot</span>
+    </div>
+  </div>
+  <div style="display:flex;flex:1;overflow:hidden">
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <textarea id="pr-input" spellcheck="false" placeholder="Begin your verse here…"></textarea>
+    </div>
+    <div class="col-div" style="width:0.5px;background:#d0cec5;flex-shrink:0"></div>
+    <div id="pr-panel" style="flex:1;overflow-y:auto;padding:20px"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+const FUNC = new Set([
+  'a','an','the','and','but','or','nor','so','in','on','at','to','of',
+  'with','by','from','as','if','be','is','am','are','was','were','been',
+  'do','did','does','had','has','have','he','she','it','i','we','you',
+  'they','me','him','her','us','them','my','his','its','our','your',
+  'their','this','that','these','those','who','which','what','when',
+  'how','can','will','shall','may','might','could','would','should',
+  'must','than','then','o','oh','ah','lo','ere','neath','fore','gainst',
+  'tis','twas','twere','twill','twixt'
+]);
+
+const OVERRIDES = {
+  every:3,everywhere:4,comfortable:4,different:3,interest:3,
+  heaven:2,given:2,even:2,evil:2,over:2,under:2,other:2,another:3,
+  being:2,doing:2,going:2,seeing:2,saying:2,having:2,making:2,loving:2,
+  follow:2,hollow:2,fellow:2,yellow:2,mellow:2,below:2,shadow:2,sorrow:2,morrow:2,
+  mercy:2,glory:2,story:2,fury:2,beauty:2,duty:2,jury:2,envy:2,
+  gentle:2,candle:2,single:2,trouble:2,double:2,people:2,little:2,
+  simple:2,purple:2,settle:2,battle:2,castle:2,muscle:2,circle:2,
+  woeful:2,hateful:2,awful:2,grateful:2,painful:2,faithful:2,graceful:2,
+  seven:2,raven:2,haven:2,laden:2,maiden:2,
+  power:2,tower:2,flower:2,shower:2,lower:2,hour:1,our:1,
+  fire:2,hire:2,liar:2,prior:2,choir:1,
+  'languishd':3,'alterd':2,'followd':2,'sayd':1,'usd':1,'throwd':1
+};
+
+function cw(w){ return w.toLowerCase().replace(/[^a-z]/g,''); }
+
+function nSyl(word){
+  const w = cw(word);
+  if(!w) return 0;
+  if(OVERRIDES[w]) return OVERRIDES[w];
+  if(w.length===1) return /[aeiouy]/.test(w)?1:0;
+  let n = (w.match(/[aeiouy]+/g)||[]).length;
+  if(!n) return 1;
+  if(/e$/.test(w) && n>1 && !/[aeiouy]e$/.test(w)){
+    if(!/[bcdfgklmnprstvwz][lr]e$/.test(w)) n--;
+  }
+  if(/[^td]ed$/.test(w) && n>1) n--;
+  if(/[^sxzaeiou]es$/.test(w) && n>1) n--;
+  return Math.max(1,n);
+}
+
+function splitSyls(word){
+  const w = cw(word);
+  const n = nSyl(word);
+  if(n<=1) return [w||word];
+  const vms=[];
+  let m, re=/[aeiouy]+/g;
+  while((m=re.exec(w))!==null) vms.push({s:m.index,e:m.index+m[0].length});
+  if(vms.length<2) return [w];
+  const use = vms.slice(0, n+1);
+  const splits=[];
+  for(let i=0;i<Math.min(n-1,use.length-1);i++){
+    const gs=use[i].e, ge=use[i+1].s;
+    const gap=ge-gs;
+    if(gap<=1) splits.push(gs);
+    else splits.push(gs+Math.ceil(gap/2));
+  }
+  const parts=[];
+  let prev=0;
+  for(const sp of splits){parts.push(w.slice(prev,sp));prev=sp;}
+  parts.push(w.slice(prev));
+  return parts.filter(p=>p.length>0).length===n ? parts : [w];
+}
+
+function stresses(word, n){
+  const w = cw(word);
+  if(n===0) return [];
+  if(n===1) return [!FUNC.has(w)];
+  const s=new Array(n).fill(false);
+  if(/tion$|sion$/.test(w))                                           { s[n-2]=true; }
+  else if(/ic$/.test(w))                                              { s[n-2]=true; }
+  else if(/(ity|ety|ary|ory|ery)$/.test(w) && n>=3)                  { s[n-3]=true; }
+  else if(/(ious|eous|uous|ial|ian)$/.test(w) && n>=2)               { s[Math.max(0,n-3)]=true; }
+  else if(/(ment|ness|less|ful|ward|ship|dom|hood|some)$/.test(w))   { s[0]=true; }
+  else if(/(ing|er|est|en|ly|ish)$/.test(w))                         { s[0]=true; }
+  else if(n===2 && /^(be|re|de|pre|pro|per|con|com|dis|mis|sub|un|ex|a[^e])/.test(w)) { s[1]=true; }
+  else { s[0]=true; }
+  return s;
+}
+
+const FOOT_NAMES={2:'dimeter',3:'trimeter',4:'tetrameter',5:'pentameter',6:'hexameter',7:'heptameter',8:'octameter'};
+
+function detectMetre(syls){
+  const n=syls.length;
+  if(n===0) return {name:'',footSize:2};
+  const sv=syls.map(s=>s.stressed?1:0);
+  const cands=[
+    {type:'iambic',    pat:[0,1],sz:2},
+    {type:'trochaic',  pat:[1,0],sz:2},
+    {type:'anapestic', pat:[0,0,1],sz:3},
+    {type:'dactylic',  pat:[1,0,0],sz:3},
+    {type:'spondaic',  pat:[1,1],sz:2},
+    {type:'pyrrhic',   pat:[0,0],sz:2},
+  ];
+  let best={score:-1,name:'free verse',footSize:2};
+  for(const c of cands){
+    let score=0;
+    for(let i=0;i<n;i++) if(sv[i]===c.pat[i%c.sz]) score++;
+    const norm=score/n;
+    if(norm>best.score){
+      const fc=Math.round(n/c.sz);
+      const fn=FOOT_NAMES[fc]||`${fc}-foot`;
+      best={score:norm,name:`${c.type} ${fn}`,footSize:c.sz};
+    }
+  }
+  if(best.score<0.52) return {name:'irregular / free verse',footSize:2};
+  return {name:best.name,footSize:best.footSize};
+}
+
+function scanLine(line){
+  if(!line.trim()) return null;
+  const tokens=line.trim().split(/\s+/).filter(Boolean);
+  const flat=[];
+  for(const tok of tokens){
+    const n=nSyl(tok);
+    if(!n) continue;
+    const ss=stresses(tok,n);
+    const parts=splitSyls(tok);
+    for(let i=0;i<n;i++) flat.push({t: parts[i]||cw(tok)||tok, stressed: ss[i]});
+  }
+  if(!flat.length) return null;
+  const {name:meter,footSize}=detectMetre(flat);
+  const feet=[];
+  for(let i=0;i<flat.length;i+=footSize) feet.push(flat.slice(i,i+footSize));
+  return {flat, feet, meter};
+}
+
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function render(poem){
+  const panel=document.getElementById('pr-panel');
+  const lines=poem.split('\n');
+  panel.innerHTML='';
+  for(const line of lines){
+    const d=document.createElement('div');
+    if(!line.trim()){ d.className='blank-gap'; panel.appendChild(d); continue; }
+    d.className='sc-line';
+    const result=scanLine(line);
+    if(!result){ d.innerHTML='<span style="color:#aaa;font-style:italic;font-size:13px">—</span>'; panel.appendChild(d); continue; }
+    const row=document.createElement('div');
+    row.className='syl-row';
+    result.feet.forEach((foot,fi)=>{
+      foot.forEach(syl=>{
+        const cell=document.createElement('div');
+        cell.className='syl '+(syl.stressed?'stressed':'unstressed');
+        cell.innerHTML=`<span class="syl-mk">${syl.stressed?'/':'˘'}</span><span class="syl-tx">${esc(syl.t)}</span>`;
+        row.appendChild(cell);
+      });
+      if(fi<result.feet.length-1){
+        const bar=document.createElement('div');
+        bar.className='syl foot-sep';
+        bar.innerHTML='<span class="syl-mk">˘</span><span class="syl-tx">|</span>';
+        row.appendChild(bar);
+      }
+    });
+    d.appendChild(row);
+    if(result.meter){
+      const mt=document.createElement('div'); mt.className='meter-tag'; mt.textContent=result.meter; d.appendChild(mt);
+    }
+    panel.appendChild(d);
+  }
+}
+
+const SAMPLE="Those lips that Love's own hand did make\nBreathed forth the sound that said 'I hate'\nTo me that languish'd for her sake;\nBut when she saw my woeful state,\nStraight in her heart did mercy come,\nChiding that tongue that ever sweet\nWas used in giving gentle doom,\nAnd taught it thus anew to greet:\n'I hate' she alter'd with an end,\nThat follow'd it as gentle day\nDoth follow night, who like a fiend\nFrom heaven to hell is flown away;\n'I hate' from hate away she threw,\nAnd saved my life, saying 'not you.'";
+
+const ta=document.getElementById('pr-input');
+ta.value=SAMPLE;
+render(SAMPLE);
+
+let tmr=null;
+ta.addEventListener('input',()=>{ clearTimeout(tmr); tmr=setTimeout(()=>render(ta.value),120); });
+
+})();
+</script>
+</body>
+</html>
